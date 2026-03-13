@@ -164,7 +164,7 @@ const SSTApi = {
   },
 
   // ── VERIFICAR PASSWORD (LOGIN SECRETO) ──────
-  verificarPassword(pwd) {
+  verificarPassword(usuario, pwd) {
     return new Promise((resolve) => {
       const cbName = "_sst_login_" + Date.now();
       const script = document.createElement("script");
@@ -173,7 +173,7 @@ const SSTApi = {
       window[cbName] = (data) => {
         done = true;
         cleanup();
-        resolve(!!data.success);
+        resolve(data);
       };
 
       const cleanup = () => {
@@ -183,6 +183,7 @@ const SSTApi = {
 
       script.src = SST_CONFIG.SCRIPT_URL
         + "?action=verificarPassword"
+        + "&usuario=" + encodeURIComponent(usuario)
         + "&pwd=" + encodeURIComponent(pwd)
         + "&callback=" + cbName
         + "&_=" + Date.now();
@@ -191,17 +192,68 @@ const SSTApi = {
         if (done) return;
         done = true;
         cleanup();
-        resolve(false);
+        resolve({ success: false, error: "Error de red al conectar" });
       };
 
       setTimeout(() => {
         if (done) return;
         done = true;
         cleanup();
-        resolve(false);
+        resolve({ success: false, error: "Tiempo de espera agotado" });
       }, 10000);
 
       document.head.appendChild(script);
+    });
+  },
+
+  // ── OBTENER USUARIOS ────────────────────────
+  obtenerUsuarios() {
+    return new Promise((resolve, reject) => {
+      const cbName = "_sst_usr_" + Date.now();
+      const script = document.createElement("script");
+      let done = false;
+
+      window[cbName] = (data) => {
+        done = true;
+        cleanup();
+        if (data && data.success) {
+          resolve(data.usuarios || []);
+        } else {
+          reject(new Error(data?.error || "Error al obtener usuarios"));
+        }
+      };
+
+      const cleanup = () => {
+        try { document.head.removeChild(script); } catch(e) {}
+        delete window[cbName];
+      };
+
+      script.src = SST_CONFIG.SCRIPT_URL
+        + "?action=obtenerUsuarios"
+        + "&callback=" + cbName
+        + "&_=" + Date.now();
+      
+      script.onerror = () => reject(new Error("Error de red"));
+      setTimeout(() => reject(new Error("Timeout")), 15000);
+      document.head.appendChild(script);
+    });
+  },
+
+  // ── GUARDAR USUARIO ─────────────────────────
+  async guardarUsuarioBackend(usuario, pwd, permisos) {
+    return await this.postData({
+      action: "guardarUsuario",
+      usuario: usuario,
+      pwd: pwd,
+      permisos: permisos
+    });
+  },
+
+  // ── ELIMINAR USUARIO ────────────────────────
+  async eliminarUsuarioBackend(usuario) {
+    return await this.postData({
+      action: "eliminarUsuario",
+      usuario: usuario
     });
   }
 };

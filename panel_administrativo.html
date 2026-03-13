@@ -24,6 +24,10 @@
       <p>Ingresa tu contraseña para continuar</p>
       <form id="loginForm">
         <div class="field">
+          <label>Usuario</label>
+          <input type="text" id="userInput" class="input" placeholder="admin" required>
+        </div>
+        <div class="field">
           <label>Contraseña</label>
           <input type="password" id="pwdInput" class="input" placeholder="••••••••" required>
         </div>
@@ -77,6 +81,11 @@
       <button class="nav-btn" id="navBtnProveedores"
               onclick="mostrarTab('proveedores')">
         <span class="nav-icon">🏢</span> Proveedores
+      </button>
+
+      <button class="nav-btn" id="navBtnUsuarios"
+              onclick="mostrarTab('usuarios')">
+        <span class="nav-icon">👥</span> Usuarios
       </button>
     </aside>
 
@@ -231,6 +240,31 @@
         </div>
       </div>
 
+      <!-- ── TAB: USUARIOS ── -->
+      <div id="tabUsuarios" class="tab-pane">
+        <div class="data-card">
+          <div class="data-card-head">
+            <h2>Gestión de Usuarios</h2>
+            <button class="btn btn-success" onclick="abrirModalUsuario()">➕ Nuevo Usuario</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Permisos</th>
+                  <th>Fecha Creación</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tablaUsuarios">
+                <tr><td colspan="4" class="empty">⏳ Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 
@@ -307,10 +341,48 @@
     </div>
   </div>
 
+  <!-- ══════════════════════════════════════════
+       MODAL: USUARIO
+  ══════════════════════════════════════════ -->
+  <div id="modalUsuario" class="modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h2 id="muTitulo">👤 Nuevo Usuario</h2>
+        <button class="modal-close" onclick="cerrarModalUsuario()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Nombre de Usuario</label>
+          <input type="text" id="muNombre" class="input" placeholder="Ej: juan.perez" required>
+        </div>
+        <div class="field">
+          <label>Contraseña</label>
+          <input type="password" id="muPassword" class="input" placeholder="Nueva contraseña" required>
+          <small id="muPwdHint" style="display:none; color:var(--gray-400);">Déjalo en blanco para mantener la clave actual.</small>
+        </div>
+        <div class="field">
+          <label>Permisos de Acceso</label>
+          <div class="permisos-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem; margin-top:0.5rem;">
+            <label><input type="checkbox" class="cb-permiso" value="dashboard"> Dashboard general</label>
+            <label><input type="checkbox" class="cb-permiso" value="documentos"> Gestionar Documentos</label>
+            <label><input type="checkbox" class="cb-permiso" value="areas"> Gestionar Áreas</label>
+            <label><input type="checkbox" class="cb-permiso" value="proveedores"> Ver Proveedores</label>
+            <label><input type="checkbox" class="cb-permiso" value="usuarios"> Gestionar Usuarios</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" onclick="cerrarModalUsuario()">Cancelar</button>
+        <button class="btn btn-success" onclick="guardarUsuario()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SCRIPTS -->
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/areas.js"></script>
+  <script src="js/usuarios.js"></script>
   <script src="js/admin.js"></script>
   
 </body>

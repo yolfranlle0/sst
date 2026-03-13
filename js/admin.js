@@ -7,9 +7,12 @@ let filtrados   = [];   // registros filtrados
 let editandoDoc = null; // { idx, registro }
 let editandoArea = null;
 
+let currentUser = null; // { usuario, rol, permisos }
+
 /* ── LOGIN ─────────────────────────────────── */
 document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
+  const usuario = document.getElementById("userInput").value.trim();
   const pwd = document.getElementById("pwdInput").value;
   const btn = e.target.querySelector('button');
   const errorEl = document.getElementById("loginError");
@@ -20,16 +23,21 @@ document.getElementById("loginForm").addEventListener("submit", async e => {
   btn.textContent = "Verificando...";
   errorEl.style.display = "none";
   
-  // Verificación contra Google Apps Script en lugar de config.js
-  const esValida = await SSTApi.verificarPassword(pwd);
+  const respuesta = await SSTApi.verificarPassword(usuario, pwd);
   
-  if (esValida) {
+  if (respuesta && respuesta.success) {
+    currentUser = {
+      usuario: usuario || 'admin',
+      rol: respuesta.rol || 'admin',
+      permisos: respuesta.permisos || []
+    };
+    
     document.getElementById("loginPage").style.display  = "none";
     document.getElementById("appLayout").style.display  = "grid";
     iniciarAdmin();
   } else {
     errorEl.style.display = "block";
-    errorEl.textContent   = "❌ Contraseña incorrecta";
+    errorEl.textContent   = "❌ " + (respuesta.error || "Error de conexión");
   }
   
   btn.disabled = false;
@@ -40,12 +48,15 @@ function logout() {
   document.getElementById("appLayout").style.display = "none";
   document.getElementById("loginPage").style.display = "flex";
   document.getElementById("pwdInput").value = "";
+  document.getElementById("userInput").value = "";
   document.getElementById("loginError").style.display = "none";
   registros = []; filtrados = [];
+  currentUser = null;
 }
 
 /* ── INICIAR ────────────────────────────────── */
 function iniciarAdmin() {
+  aplicarPermisosUI();
   cargarDatos();
   actualizarReloj();
   setInterval(actualizarReloj, 1000);
@@ -53,6 +64,13 @@ function iniciarAdmin() {
   setInterval(() => {
     if (document.getElementById("tabDashboard").classList.contains("active")) cargarDatos();
   }, 90000);
+  
+  // Seleccionar primera tab permitida
+  if (tienePermiso('dashboard')) mostrarTab('dashboard');
+  else if (tienePermiso('documentos')) mostrarTab('documentos');
+  else if (tienePermiso('areas')) mostrarTab('areas');
+  else if (tienePermiso('proveedores')) mostrarTab('proveedores');
+  else if (tienePermiso('usuarios')) mostrarTab('usuarios');
 }
 
 function actualizarReloj() {
@@ -60,20 +78,41 @@ function actualizarReloj() {
   if (el) el.textContent = new Date().toLocaleTimeString("es-CO");
 }
 
+/* ── PERMISOS ──────────────────────────────── */
+function tienePermiso(permiso) {
+  if (!currentUser) return false;
+  if (currentUser.rol === 'admin') return true;
+  return currentUser.permisos.includes(permiso);
+}
+
+function aplicarPermisosUI() {
+  const tabs = ['dashboard', 'documentos', 'areas', 'proveedores', 'usuarios'];
+  tabs.forEach(t => {
+    const btn = document.getElementById("navBtn" + capitalizar(t));
+    if (btn) {
+      if (tienePermiso(t)) btn.style.display = 'flex';
+      else btn.style.display = 'none';
+    }
+  });
+}
+
 /* ── TABS ──────────────────────────────────── */
 function mostrarTab(nombre) {
+  if (!tienePermiso(nombre)) return; // Acceso denegado
+
   document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
 
   document.getElementById("tab" + capitalizar(nombre)).classList.add("active");
   document.getElementById("navBtn" + capitalizar(nombre)).classList.add("active");
 
-  const titles = { dashboard: "Dashboard", documentos: "Gestión de Documentos", areas: "Gestionar Áreas", proveedores: "Proveedores" };
+  const titles = { dashboard: "Dashboard", documentos: "Gestión de Documentos", areas: "Gestionar Áreas", proveedores: "Proveedores", usuarios: "Gestión de Usuarios" };
   document.getElementById("pageTitle").textContent = titles[nombre] || nombre;
 
   if (nombre === "documentos")  renderTablaDocumentos();
   if (nombre === "areas")       actualizarUIAreas();
   if (nombre === "proveedores") renderProveedores();
+  if (nombre === "usuarios")    if(typeof renderUsuarios === 'function') renderUsuarios();
   if (nombre === "dashboard")   cargarDatos();
 }
 
