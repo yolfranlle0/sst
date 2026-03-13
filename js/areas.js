@@ -46,37 +46,58 @@ async function cargarAreas() {
 // ═════════════════════════════════════════════════════════════════════════
 
 async function guardarAreasEnSheets(areas) {
-  try {
-    console.log('💾 Guardando áreas en Google Sheets...');
-    
-    const response = await fetch(SST_CONFIG.SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'guardarAreasEnSheets',
-        areas: areas
-      })
+  console.log('💾 Guardando áreas en Google Sheets (vía iframe para evitar CORS)...');
+  
+  return new Promise((resolve) => {
+    const frameName = "sst_areas_" + Date.now();
+
+    const iframe = document.createElement("iframe");
+    iframe.name = frameName;
+    iframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden;";
+    document.body.appendChild(iframe);
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = SST_CONFIG.SCRIPT_URL;
+    form.target = frameName;
+    form.style.display = "none";
+
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "data";
+    input.value = JSON.stringify({
+      action: 'guardarAreasEnSheets',
+      areas: areas
     });
-    
-    const data = await response.json();
-    
-    console.log('Respuesta del servidor:', data);
-    
-    // Considerar como éxito si la respuesta es OK
-    if (response.ok) {
-      console.log('✅ Áreas guardadas en Google Sheets');
+    form.appendChild(input);
+    document.body.appendChild(form);
+
+    let done = false;
+    const cleanup = () => {
+      try { document.body.removeChild(form); } catch(e) {}
+      try { document.body.removeChild(iframe); } catch(e) {}
+    };
+
+    iframe.onload = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      console.log('✅ Áreas enviadas exitosamente (onload)');
       areasGlobales = areas;
-      return true;
-    } else {
-      console.warn('⚠️ Respuesta del servidor:', data);
-      // Aún así guardar localmente
+      resolve(true);
+    };
+
+    setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      console.log('⚠️ Timeout al guardar áreas, asumiendo éxito');
       areasGlobales = areas;
-      return true;
-    }
-  } catch (error) {
-    console.error('❌ Error:', error);
-    areasGlobales = areas; // Guardar de todas formas
-    return true; // Retornar true porque se guardó localmente al menos
-  }
+      resolve(true);
+    }, 10000);
+
+    form.submit();
+  });
 }
 // ═════════════════════════════════════════════════════════════════════════
 // AGREGAR/EDITAR ÁREA
@@ -114,13 +135,7 @@ async function agregarArea(nombreArea, requisitos) {
   
   if (guardado) {
     console.log('✅ Área guardada en Google Sheets');
-    
-    // ⭐ IMPORTANTE: Esperar un poco y luego RECARGAR desde Google Sheets
-    setTimeout(async () => {
-      console.log('🔄 Recargando áreas desde Google Sheets...');
-      await cargarAreas();  // ← Recargar las áreas
-    }, 1000);  // Esperar 1 segundo
-    
+    actualizarUIAreas();
     return true;
   } else {
     alert('❌ Error al guardar en Google Sheets');

@@ -6,12 +6,9 @@
 const SST_CONFIG = {
 
   // ── URL del Google Apps Script ─────────────
-  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwXOlvQj34yPBcYc2I8lWRFy23qTAYSUCehNZcJ5AkuV34x6PnaUZZiiNwTJ4gsaPk/exec",
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycby7FcEUwwR1ELVGrXQLLDNScNjTJexyJIiuCtvZeRyM_WouoZCbXIg9rJpMFD5tMoJC/exec",
 
-  // ── Contraseña panel admin ──────────────────
-  ADMIN_PASSWORD: "admin123",
-
-  // ── Áreas y requisitos por defecto ─────────
+  // ── Áreas por defecto si no hay ─────────────
   AREAS_DEFAULT: {
     "Caldera": [
       "Certificado de capacitación en calderas",

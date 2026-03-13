@@ -5,15 +5,20 @@
 let archivos = {};   // { index: File }
 
 /* ── INIT ──────────────────────────────────── */
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // Mostrar loading mientras se cargan las áreas de Google Sheets
+  Loading.show();
+  await cargarAreas();
+  Loading.hide();
+
   cargarSelectAreas();
-  // Sync áreas en tiempo real desde admin (misma pestaña / localStorage)
-  setInterval(sincronizarAreas, 3000);
+  // Sync áreas en tiempo real (cada 10 segundos)
+  setInterval(sincronizarAreas, 10000);
 });
 
 /* ── CARGAR ÁREAS EN SELECT ─────────────────── */
 function cargarSelectAreas() {
-  const areas  = SSTAreas.get();
+  const areas = obtenerAreas();
   const select = document.getElementById("areaSelect");
   const actual = select.value;
 
@@ -28,13 +33,17 @@ function cargarSelectAreas() {
 }
 
 /* ── SYNC ÁREAS ────────────────────────────── */
-let _lastAreas = JSON.stringify(SSTAreas.get());
-function sincronizarAreas() {
-  const current = JSON.stringify(SSTAreas.get());
-  if (current !== _lastAreas) {
-    _lastAreas = current;
+let _lastAreas = "";
+async function sincronizarAreas() {
+  const oldKeys = JSON.stringify(obtenerAreas());
+  await cargarAreas();
+  const current = JSON.stringify(obtenerAreas());
+
+  if (current !== oldKeys) {
     cargarSelectAreas();
-    if (document.getElementById("areaSelect").value) cargarRequisitos();
+    if (document.getElementById("areaSelect").value) {
+      cargarRequisitos();
+    }
   }
 }
 
@@ -42,11 +51,11 @@ function sincronizarAreas() {
 function cargarRequisitos() {
   const area = document.getElementById("areaSelect").value;
   const wrap = document.getElementById("requisitosWrap");
-  archivos   = {};
+  archivos = {};
 
   if (!area) { wrap.style.display = "none"; return; }
 
-  const reqs = SSTAreas.get()[area] || [];
+  const reqs = obtenerAreas()[area] || [];
   const list = document.getElementById("requisitosList");
 
   list.innerHTML = reqs.map((req, i) => `
@@ -60,7 +69,7 @@ function cargarRequisitos() {
         class="file-input"
         id="file_${i}"
         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-        onchange="onFileChange(${i}, '${req.replace(/'/g,"\\'")}')">
+        onchange="onFileChange(${i}, '${req.replace(/'/g, "\\'")}')">
       <div class="file-confirm" id="confirm_${i}">
         <span>✓</span><span id="fname_${i}"></span>
       </div>
@@ -74,25 +83,53 @@ function cargarRequisitos() {
 /* ── ARCHIVO SELECCIONADO ───────────────────── */
 function onFileChange(idx, reqName) {
   const input = document.getElementById(`file_${idx}`);
-  const file  = input.files[0];
-  if (!file) return;
+  const file = input.files[0];
+  const reqItem = document.getElementById(`reqItem_${idx}`);
+  const confirmBlock = document.getElementById(`confirm_${idx}`);
+  
+  if (!file) {
+    reqItem.classList.remove("ok");
+    confirmBlock.classList.remove("show");
+    delete archivos[idx];
+    return;
+  }
+  
+  // 1. Validar el tamaño del archivo (Máximo 5MB)
+  const MAX_SIZE_MB = 5;
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+    alert(`❌ El archivo pesa demasiado (${(file.size/1024/1024).toFixed(1)}MB).\nEl tamaño máximo permitido es ${MAX_SIZE_MB}MB.`);
+    input.value = ""; // Limpiar el input
+    return;
+  }
+  
+  // 2. Validar qué tipo de archivo es (Extensiones permitidas)
+  const extensionesPermitidas = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.xls', '.xlsx'];
+  const fileNameMinusculas = file.name.toLowerCase();
+  const extensionSoportada = extensionesPermitidas.some(ext => fileNameMinusculas.endsWith(ext));
+  
+  if (!extensionSoportada) {
+    alert(`❌ Formato de archivo no permitido.\nSolo se aceptan: ${extensionesPermitidas.join(', ')}`);
+    input.value = ""; // Limpiar el input
+    return;
+  }
+  
   archivos[idx] = file;
   document.getElementById(`fname_${idx}`).textContent = file.name;
-  document.getElementById(`confirm_${idx}`).classList.add("show");
-  document.getElementById(`reqItem_${idx}`).classList.add("ok");
+  confirmBlock.classList.add("show");
+  reqItem.classList.add("ok");
 }
 
 /* ── ENVIAR ─────────────────────────────────── */
 async function enviarFormulario() {
-  const area        = document.getElementById("areaSelect").value;
-  const proveedor   = document.getElementById("fProveedor").value.trim();
+  const area = document.getElementById("areaSelect").value;
+  const proveedor = document.getElementById("fProveedor").value.trim();
   const responsable = document.getElementById("fResponsable").value.trim();
-  const documento   = document.getElementById("fDocumento").value.trim();
-  const empresa     = document.getElementById("fEmpresa").value.trim();
-  const msgEl       = document.getElementById("msgPortal");
-  const progressWrap= document.getElementById("progressWrap");
-  const progressFill= document.getElementById("progressFill");
-  const btnEnviar   = document.getElementById("btnEnviar");
+  const documento = document.getElementById("fDocumento").value.trim();
+  const empresa = document.getElementById("fEmpresa").value.trim();
+  const msgEl = document.getElementById("msgPortal");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressFill = document.getElementById("progressFill");
+  const btnEnviar = document.getElementById("btnEnviar");
 
   // Ocultar mensaje anterior
   msgEl.className = "msg"; msgEl.style.display = "none";
@@ -105,7 +142,7 @@ async function enviarFormulario() {
     return;
   }
 
-  const reqs = SSTAreas.get()[area] || [];
+  const reqs = obtenerAreas()[area] || [];
 
   // Validar archivos
   for (let i = 0; i < reqs.length; i++) {
@@ -133,13 +170,13 @@ async function enviarFormulario() {
 
       await SSTApi.guardarDocumento({
         proveedor, responsable, documento, empresa, area,
-        requisito:    reqs[i],
+        requisito: reqs[i],
         nombreArchivo: archivos[i].name,
         base64
       });
 
       enviados++;
-    } catch(err) {
+    } catch (err) {
       errores.push(`"${reqs[i]}": ${err.message}`);
       console.error("Error doc " + i, err);
     }

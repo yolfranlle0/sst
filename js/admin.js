@@ -8,17 +8,32 @@ let editandoDoc = null; // { idx, registro }
 let editandoArea = null;
 
 /* ── LOGIN ─────────────────────────────────── */
-document.getElementById("loginForm").addEventListener("submit", e => {
+document.getElementById("loginForm").addEventListener("submit", async e => {
   e.preventDefault();
   const pwd = document.getElementById("pwdInput").value;
-  if (pwd === SST_CONFIG.ADMIN_PASSWORD) {
+  const btn = e.target.querySelector('button');
+  const errorEl = document.getElementById("loginError");
+  
+  if (!pwd) return;
+  
+  btn.disabled = true;
+  btn.textContent = "Verificando...";
+  errorEl.style.display = "none";
+  
+  // Verificación contra Google Apps Script en lugar de config.js
+  const esValida = await SSTApi.verificarPassword(pwd);
+  
+  if (esValida) {
     document.getElementById("loginPage").style.display  = "none";
     document.getElementById("appLayout").style.display  = "grid";
     iniciarAdmin();
   } else {
-    document.getElementById("loginError").style.display = "block";
-    document.getElementById("loginError").textContent   = "❌ Contraseña incorrecta";
+    errorEl.style.display = "block";
+    errorEl.textContent   = "❌ Contraseña incorrecta";
   }
+  
+  btn.disabled = false;
+  btn.textContent = "Ingresar →";
 });
 
 function logout() {
@@ -205,7 +220,7 @@ async function guardarEstado() {
   cerrarModalEstado();
 
   try {
-    await SSTApi.actualizarEstado({
+    const payloadEnvio = {
       proveedor:   r.Proveedor,
       documento:   r.Documento,
       requisito:   r.Requisito,
@@ -213,7 +228,10 @@ async function guardarEstado() {
       estado:      nuevoEstado,
       comentarios,
       fila:        r.Fila || r._fila || ""
-    });
+    };
+    console.log("Enviando actualización de estado:", payloadEnvio);
+    
+    await SSTApi.actualizarEstado(payloadEnvio);
 
     // Actualizar localmente
     registros[idx].Estado      = nuevoEstado;
@@ -235,28 +253,8 @@ async function guardarEstado() {
 }
 
 /* ── ÁREAS ──────────────────────────────────── */
-function renderTablaAreas() {
-  const areas = obtenerAreas();
-  const tbody = document.getElementById("tablaAreas");
-  
-  if (!Object.keys(areas).length) {
-    tbody.innerHTML = `<tr><td colspan="3" class="empty">No hay áreas registradas</td></tr>`;
-    return;
-  }
-  
-  // Usar el mismo formato que actualizarUIAreas()
-  tbody.innerHTML = Object.entries(areas).map(([nombre, reqs]) => `
-    <tr>
-      <td><strong>${nombre}</strong></td>
-      <td>${reqs.length} requisito${reqs.length !== 1 ? "s" : ""}</td>
-      <td>
-        <button class="btn btn-accent btn-sm" onclick="abrirModalReqs('${nombre.replace(/'/g,"\\'")}')">📝 Requisitos</button>
-        <button class="btn btn-danger btn-sm" onclick="eliminarArea('${nombre.replace(/'/g,"\\'")}')">🗑️</button>
-      </td>
-    </tr>
-  `).join("");
-}
-// NUEVA FUNCIÓN CON OTRO NOMBRE
+// Utilizamos actualizarUIAreas y eliminarArea desde areas.js directamente.
+
 async function crearNuevaArea() {
   const nombreArea = document.getElementById('inputNuevaArea').value.trim();
   
@@ -265,50 +263,24 @@ async function crearNuevaArea() {
     return;
   }
   
-  // Llamar a agregarArea() de areas.js
+  Loading.show();
   const resultado = await agregarArea(nombreArea, []);
+  Loading.hide();
   
   if (resultado) {
     document.getElementById('inputNuevaArea').value = '';
-    alert('✅ Área creada');
-    cargarAreas(); // Actualizar tabla
+    Toast.ok('✅ Área creada correctamente');
   }
-}
-// Helper para mostrar mensajes en el área de áreas
-function mostrarMsgAreas(texto, tipo) {
-  const msgEl = document.getElementById('msgAreas');
-  msgEl.textContent = texto;
-  msgEl.className = `msg ${tipo}`;
-  msgEl.style.display = 'block';
-  
-  if (tipo === 'success') {
-    setTimeout(() => {
-      msgEl.style.display = 'none';
-    }, 3000);
-  }
-}
-
-// Renombrar la función de areas.js para no confundir
-async function agregarArea_SHEETS(nombreArea, requisitos) {
-  // Esta es la función de areas.js que ya tienes
-  return await agregarArea(nombreArea, requisitos);
-}
-
-function eliminarArea(nombre) {
-  if (!confirm(`¿Eliminar el área "${nombre}" y todos sus requisitos?`)) return;
-  const areas = SSTAreas.get();
-  delete areas[nombre];
-  SSTAreas.save(areas);
-  renderTablaAreas();
-  Toast.info(`Área "${nombre}" eliminada`);
 }
 
 function mostrarMsgAreas(txt, tipo) {
   const el = document.getElementById("msgAreas");
-  el.textContent = txt;
-  el.className = `msg ${tipo} show`;
-  el.style.display = "block";
-  setTimeout(() => { el.style.display = "none"; }, 4000);
+  if (el) {
+    el.textContent = txt;
+    el.className = `msg ${tipo} show`;
+    el.style.display = "block";
+    setTimeout(() => { el.style.display = "none"; }, 4000);
+  }
 }
 
 /* ── MODAL REQUISITOS ───────────────────────── */
@@ -326,7 +298,7 @@ function cerrarModalReqs() {
 }
 
 function renderListaReqs() {
-  const areas = SSTAreas.get();
+  const areas = obtenerAreas();
   const reqs  = areas[editandoArea] || [];
   const lista = document.getElementById("mRLista");
 
@@ -348,34 +320,48 @@ function renderListaReqs() {
   `).join("");
 }
 
-function agregarReq() {
+async function agregarReq() {
   const val   = document.getElementById("mRInput").value.trim();
   if (!val) { alert("Ingresa el nombre del requisito"); return; }
-  const areas = SSTAreas.get();
+  const areas = obtenerAreas();
   if (!areas[editandoArea]) areas[editandoArea] = [];
   if (areas[editandoArea].includes(val)) { alert("Este requisito ya existe"); return; }
   areas[editandoArea].push(val);
-  SSTAreas.save(areas);
+
+  Loading.show();
+  await guardarAreasEnSheets(areas);
+  Loading.hide();
+
   document.getElementById("mRInput").value = "";
   renderListaReqs();
+  actualizarUIAreas(); // actualiza la cantidad de requisitos en la tabla
 }
 
-function editarReq(idx) {
-  const areas = SSTAreas.get();
+async function editarReq(idx) {
+  const areas = obtenerAreas();
   const nuevo = prompt("Editar requisito:", areas[editandoArea][idx]);
   if (nuevo && nuevo.trim()) {
     areas[editandoArea][idx] = nuevo.trim();
-    SSTAreas.save(areas);
+
+    Loading.show();
+    await guardarAreasEnSheets(areas);
+    Loading.hide();
+
     renderListaReqs();
   }
 }
 
-function eliminarReq(idx) {
+async function eliminarReq(idx) {
   if (!confirm("¿Eliminar este requisito?")) return;
-  const areas = SSTAreas.get();
+  const areas = obtenerAreas();
   areas[editandoArea].splice(idx, 1);
-  SSTAreas.save(areas);
+
+  Loading.show();
+  await guardarAreasEnSheets(areas);
+  Loading.hide();
+
   renderListaReqs();
+  actualizarUIAreas();
 }
 
 /* ── PROVEEDORES ────────────────────────────── */

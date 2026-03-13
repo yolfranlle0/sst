@@ -161,6 +161,48 @@ const SSTApi = {
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
+  },
+
+  // ── VERIFICAR PASSWORD (LOGIN SECRETO) ──────
+  verificarPassword(pwd) {
+    return new Promise((resolve) => {
+      const cbName = "_sst_login_" + Date.now();
+      const script = document.createElement("script");
+      let done = false;
+
+      window[cbName] = (data) => {
+        done = true;
+        cleanup();
+        resolve(!!data.success);
+      };
+
+      const cleanup = () => {
+        try { document.head.removeChild(script); } catch(e) {}
+        delete window[cbName];
+      };
+
+      script.src = SST_CONFIG.SCRIPT_URL
+        + "?action=verificarPassword"
+        + "&pwd=" + encodeURIComponent(pwd)
+        + "&callback=" + cbName
+        + "&_=" + Date.now();
+      
+      script.onerror = () => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(false);
+      };
+
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        cleanup();
+        resolve(false);
+      }, 10000);
+
+      document.head.appendChild(script);
+    });
   }
 };
 
