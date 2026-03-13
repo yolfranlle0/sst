@@ -101,15 +101,31 @@ async function enviarReenvio() {
         const resultado = await response.json();
 
         if (resultado.success) {
-            mostrarMensajeReenvio('✅ Documento reenviado correctamente. Será revisado nuevamente.', 'success');
+            // Mostrar éxito de manera mucho más clara
+            const formBody = document.querySelector('.modal-body-reenvio');
+            const footer = document.querySelector('.modal-footer-reenvio');
+            
+            formBody.innerHTML = `
+                <div style="text-align:center; padding: 2rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+                    <h3 style="color:var(--success); margin-bottom: 0.5rem;">¡Documento Reenviado!</h3>
+                    <p>El archivo se ha subido correctamente y el equipo de SST ha sido notificado.</p>
+                    <p style="margin-top:1rem; font-size:0.9rem; color:var(--text-light);">Actualizando página en breve...</p>
+                </div>
+            `;
+            footer.style.display = 'none';
+            
             console.log('Reenvío exitoso');
             
+            // Refrescar después de 3.5 segundos para que le dé tiempo a leer
             setTimeout(() => {
                 cerrarModalReenvio();
-                // Buscar nuevamente para actualizar la lista
-                const event = new Event('submit');
-                document.getElementById('formBusqueda').dispatchEvent(event);
-            }, 1500);
+                document.getElementById('formBusqueda').dispatchEvent(new Event('submit'));
+                
+                // Restaurar el modal original por si abre otro reenvío en la misma sesión
+                setTimeout(() => location.reload(), 500); 
+            }, 3500);
+            
         } else {
             mostrarMensajeReenvio('Error: ' + (resultado.message || 'No se pudo enviar el documento'), 'error');
             console.error('Error en reenvío:', resultado);
