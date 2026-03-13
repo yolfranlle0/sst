@@ -54,46 +54,56 @@ img, svg { display: block; max-width: 100%; }
 button, input, select, textarea { font-family: inherit; }
 a { color: inherit; text-decoration: none; }
 
-/* ── SPINNER PREMIUM ─────────────────────────── */
+/* ── ANIMACIÓN DE CARGA (MUÑECO CORRIENDO) ─── */
 .spinner {
-  width: 48px;
-  height: 48px;
+  width: 60px;
+  height: 60px;
   position: relative;
+  /* El SVG contiene un pequeño obrero/muñeco corriendo */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'%3E%3Cpath d='M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7'/%3E%3Cpath fill='%23f39c12' d='M13.5 1.5c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM12.5 1.5h2v2h-2z'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  /* Animación de "correr" moviéndolo arriba/abajo y vibrando ligeramente */
+  animation: runWorker 0.6s infinite alternate ease-in-out, moveForward 2s infinite linear;
 }
 
-.spinner::before,
-.spinner::after {
+/* Efecto de saltito al correr */
+@keyframes runWorker {
+  0% { transform: translateY(0) rotate(-2deg); }
+  100% { transform: translateY(-8px) rotate(5deg); }
+}
+
+/* Efecto de velocidad (barritas de viento que pasan detrás) */
+.overlay-loading .spinner::before {
   content: "";
   position: absolute;
-  border-radius: 50%;
-  inset: 0;
+  top: 50%;
+  left: -20px;
+  width: 15px;
+  height: 3px;
+  background: var(--navy-light);
+  border-radius: 4px;
+  animation: windSpeed 0.8s infinite linear;
+  opacity: 0.6;
+}
+.overlay-loading .spinner::after {
+  content: "";
+  position: absolute;
+  top: 70%;
+  left: -10px;
+  width: 10px;
+  height: 2px;
+  background: var(--gray-400);
+  border-radius: 4px;
+  animation: windSpeed 0.6s infinite linear 0.3s;
+  opacity: 0.4;
 }
 
-.spinner::before {
-  border: 4px solid var(--gray-200);
-  border-top-color: var(--navy);
-  border-bottom-color: var(--navy-light);
-  animation: spinPremium 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-}
-
-.spinner::after {
-  border: 4px solid transparent;
-  border-left-color: var(--accent);
-  border-right-color: var(--accent);
-  animation: spinPremiumReverse 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-  opacity: 0.8;
-  transform: scale(0.85);
-}
-
-@keyframes spinPremium {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes spinPremiumReverse {
-  0%   { transform: rotate(360deg) scale(0.7); }
-  50%  { transform: rotate(180deg) scale(0.9); }
-  100% { transform: rotate(0deg) scale(0.7); }
+@keyframes windSpeed {
+  0% { transform: translateX(80px); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateX(-40px); opacity: 0; }
 }
 
 /* ── ESTADO BADGES ─────────────────────────── */
