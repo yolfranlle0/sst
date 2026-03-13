@@ -11,7 +11,7 @@ function abrirModalReenvio(requisito, area, proveedor, cedula) {
         cedula: cedula
     };
 
-    document.getElementById('reqNombre').textContent = requisito;
+    document.getElementById('reqNombre').textContent = SSTApi.escapeHTML(requisito);
     document.getElementById('archivoReenvio').value = '';
     document.getElementById('nombreArchivoReenvio').textContent = '';
     document.getElementById('msgReenvio').style.display = 'none';
