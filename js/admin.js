@@ -174,19 +174,126 @@ function renderDashboard() {
   }).join("");
 }
 
-/* ── TABLA DOCUMENTOS ───────────────────────── */
+/* ── TABLA DOCUMENTOS (ACORDEÓN POR PROVEEDOR) ───────────────────────── */
 function renderTablaDocumentos() {
   const tbody = document.getElementById("tablaDocumentos");
   if (!filtrados.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty"><div class="empty-icon">📭</div>No hay documentos</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="empty"><div class="empty-icon">📭</div>No hay documentos</td></tr>`;
     return;
   }
-  tbody.innerHTML = filtrados.map((r, i) => {
-    const idx = registros.indexOf(r);
-    return filaTR(r, idx, true);
-  }).join("");
+
+  // 1. Agrupar por proveedor
+  const proveedorGroups = {};
+  filtrados.forEach(r => {
+    const provName = r.Proveedor || "Sin Proveedor";
+    if (!proveedorGroups[provName]) {
+      proveedorGroups[provName] = {
+        empresa: r.Empresa || "",
+        responsable: r.Nombre || "—",
+        documentos: [],
+        stats: { Pendiente: 0, Aprobado: 0, Rechazado: 0 }
+      };
+    }
+    const estado = r.Estado || "Pendiente";
+    proveedorGroups[provName].stats[estado] = (proveedorGroups[provName].stats[estado] || 0) + 1;
+    proveedorGroups[provName].documentos.push(r);
+  });
+
+  // 2. Generar HTML (Fila principal + Fila desplegable oculta)
+  let html = "";
+  Object.keys(proveedorGroups).forEach((provName, pIdx) => {
+    const data = proveedorGroups[provName];
+    const totalDocs = data.documentos.length;
+    
+    // Calcular estado general visual
+    let badgeHtml = "";
+    if (data.stats.Rechazado > 0) badgeHtml += `<span class="badge rechazado" style="margin-right:4px;" title="Rechazados">${data.stats.Rechazado} ❌</span>`;
+    if (data.stats.Pendiente > 0) badgeHtml += `<span class="badge pendiente" style="margin-right:4px;" title="Pendientes">${data.stats.Pendiente} ⏳</span>`;
+    if (data.stats.Aprobado > 0)  badgeHtml += `<span class="badge aprobado" title="Aprobados">${data.stats.Aprobado} ✅</span>`;
+    
+    // Fila Principal (Acordeón)
+    html += `
+      <tr class="prov-row" onclick="toggleProveedor('provDetail_${pIdx}')" style="cursor: pointer; background: var(--off-white); transition: background 0.2s;">
+        <td>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span id="icon_provDetail_${pIdx}" style="font-size:0.8rem; color:var(--gray-500); transition: transform 0.3s;">▶</span>
+            <div>
+              <strong>${provName}</strong>
+              <div style="font-size: 0.8rem; color: var(--gray-500);">${data.empresa}</div>
+            </div>
+          </div>
+        </td>
+        <td>${data.responsable}</td>
+        <td><strong>${totalDocs}</strong> docs</td>
+        <td>${badgeHtml || '<span class="badge pendiente">0</span>'}</td>
+        <td style="text-align: right;">
+          <button class="btn btn-ghost btn-sm">Ver Detalles ⬇</button>
+        </td>
+      </tr>
+      
+      <!-- Fila Detalles (Oculta por defecto) -->
+      <tr id="provDetail_${pIdx}" style="display: none; background: #fafafa;">
+        <td colspan="5" style="padding: 0; border-bottom: 2px solid var(--gray-200);">
+          <div style="padding: 1rem 1.5rem 1rem 3rem; box-shadow: inset 0 3px 6px rgba(0,0,0,0.03);">
+            <table style="background: white; border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; margin: 0; min-width: 100%;">
+              <thead>
+                <tr style="background: var(--gray-100);">
+                  <th style="padding: 8px 12px; font-size:0.85rem;">Área</th>
+                  <th style="padding: 8px 12px; font-size:0.85rem;">Requisito</th>
+                  <th style="padding: 8px 12px; font-size:0.85rem;">Fecha</th>
+                  <th style="padding: 8px 12px; font-size:0.85rem;">Estado</th>
+                  <th style="padding: 8px 12px; font-size:0.85rem; text-align:right;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.documentos.map(doc => {
+                  const globalIdx = registros.indexOf(doc);
+                  const est = (doc.Estado || "Pendiente").toLowerCase();
+                  const archivoBtn = doc["URL Documento"] 
+                    ? `<a class="btn btn-ghost btn-sm" href="${doc["URL Documento"]}" target="_blank" style="padding: 4px 8px; font-size: 0.8rem;">📄 Ver</a>` 
+                    : "";
+                    
+                  return `
+                    <tr style="border-bottom: 1px solid #eee;">
+                      <td style="padding: 8px 12px; font-size:0.9rem;">${doc.Área || "—"}</td>
+                      <td style="padding: 8px 12px; font-size:0.9rem; max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${doc.Requisito||""}">${doc.Requisito || "—"}</td>
+                      <td style="padding: 8px 12px; font-size:0.9rem;">${fmtFecha(doc["Fecha Carga"])}</td>
+                      <td style="padding: 8px 12px;">
+                        <span class="badge ${est}" style="font-size:0.75rem; padding: 2px 6px;">${doc.Estado || "Pendiente"}</span>
+                      </td>
+                      <td style="padding: 8px 12px; text-align:right; display:flex; gap:0.5rem; justify-content:flex-end;">
+                        ${archivoBtn}
+                        <button class="btn btn-accent btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="abrirModalEstado(${globalIdx})">✏️ Estado</button>
+                      </td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
 }
 
+// Función para abrir/cerrar el acordeón de cada proveedor
+window.toggleProveedor = function(rowId) {
+  const detailRow = document.getElementById(rowId);
+  const icon = document.getElementById("icon_" + rowId);
+  
+  if (detailRow.style.display === "none") {
+    detailRow.style.display = "table-row";
+    if(icon) icon.style.transform = "rotate(90deg)";
+  } else {
+    detailRow.style.display = "none";
+    if(icon) icon.style.transform = "rotate(0deg)";
+  }
+};
+
+/* ── FILA PARA DASHBOARD (MANTIENE FORMA PLANA) ───────────────────────── */
 function filaTR(r, idx, conArchivo) {
   const est     = (r.Estado || "Pendiente").toLowerCase();
   const archivo = conArchivo && r["URL Documento"]
