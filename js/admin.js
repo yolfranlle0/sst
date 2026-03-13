@@ -218,12 +218,12 @@ function renderTablaDocumentos() {
           <div style="display:flex; align-items:center; gap:8px;">
             <span id="icon_provDetail_${pIdx}" style="font-size:0.8rem; color:var(--gray-500); transition: transform 0.3s;">▶</span>
             <div>
-              <strong>${provName}</strong>
-              <div style="font-size: 0.8rem; color: var(--gray-500);">${data.empresa}</div>
+              <strong>${SSTApi.escapeHTML(provName)}</strong>
+              <div style="font-size: 0.8rem; color: var(--gray-500);">${SSTApi.escapeHTML(data.empresa)}</div>
             </div>
           </div>
         </td>
-        <td>${data.responsable}</td>
+        <td>${SSTApi.escapeHTML(data.responsable)}</td>
         <td><strong>${totalDocs}</strong> docs</td>
         <td>${badgeHtml || '<span class="badge pendiente">0</span>'}</td>
         <td style="text-align: right;">
@@ -297,19 +297,19 @@ window.toggleProveedor = function(rowId) {
 function filaTR(r, idx, conArchivo) {
   const est     = (r.Estado || "Pendiente").toLowerCase();
   const archivo = conArchivo && r["URL Documento"]
-    ? `<a class="btn btn-ghost btn-sm" href="${r["URL Documento"]}" target="_blank">📄 Ver</a>`
+    ? `<a class="btn btn-ghost btn-sm" href="${SSTApi.escapeHTML(r["URL Documento"])}" target="_blank">📄 Ver</a>`
     : (conArchivo ? "—" : "");
   const archivoCell = conArchivo ? `<td>${archivo}</td>` : "";
 
   return `
     <tr>
-      <td><strong>${r.Proveedor || "—"}</strong></td>
-      <td>${r.Nombre || "—"}</td>
-      <td>${r.Área   || "—"}</td>
-      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.Requisito||""}">${r.Requisito || "—"}</td>
+      <td><strong>${SSTApi.escapeHTML(r.Proveedor || "—")}</strong></td>
+      <td>${SSTApi.escapeHTML(r.Nombre || "—")}</td>
+      <td>${SSTApi.escapeHTML(r.Área   || "—")}</td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${SSTApi.escapeHTML(r.Requisito||"")}"><span class="doc-meta-item">${SSTApi.escapeHTML(r.Requisito || "—")}</span></td>
       ${archivoCell}
       <td>${fmtFecha(r["Fecha Carga"])}</td>
-      <td><span class="badge ${est}">${r.Estado || "Pendiente"}</span></td>
+      <td><span class="badge ${est}">${SSTApi.escapeHTML(r.Estado || "Pendiente")}</span></td>
       <td>
         <button class="btn btn-accent btn-sm" onclick="abrirModalEstado(${idx})">✏️ Estado</button>
       </td>
@@ -322,7 +322,7 @@ function renderFiltroAreas() {
   const select = document.getElementById("filtroArea");
   const actual = select.value;
   select.innerHTML = '<option value="">Todas las áreas</option>' +
-    areas.map(a => `<option value="${a}">${a}</option>`).join("");
+    areas.map(a => `<option value="${SSTApi.escapeHTML(a)}">${SSTApi.escapeHTML(a)}</option>`).join("");
   if (actual) select.value = actual;
 }
 
@@ -457,7 +457,7 @@ function renderListaReqs() {
     <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;
                 padding:0.75rem 0.9rem;background:var(--off-white);border-radius:6px;margin-bottom:6px;
                 border:1px solid var(--gray-100);">
-      <span style="font-size:0.88rem;color:var(--navy);">${i + 1}. ${req}</span>
+      <span style="font-size:0.88rem;color:var(--navy);">${i + 1}. ${SSTApi.escapeHTML(req)}</span>
       <div style="display:flex;gap:0.4rem;">
         <button class="btn btn-ghost btn-sm" onclick="editarReq(${i})">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="eliminarReq(${i})">🗑️</button>
@@ -531,13 +531,13 @@ function renderProveedores() {
 
   grid.innerHTML = Object.values(mapa).map(p => `
     <div class="prov-card">
-      <div class="prov-name">🏢 ${p.nombre}</div>
-      <div class="prov-detail">👤 ${p.responsable || "—"}</div>
-      <div class="prov-detail">🏭 ${p.empresa     || "—"}</div>
-      <div class="prov-detail">🪪 ${p.documento   || "—"}</div>
+      <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
+      <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
+      <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
+      <div class="prov-detail">🪪 ${SSTApi.escapeHTML(p.documento   || "—")}</div>
       <div class="prov-stats">
         <span class="prov-tag">📄 ${p.total} docs</span>
-        ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${a}</span>`).join("")}
+        ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
       </div>
     </div>
   `).join("");

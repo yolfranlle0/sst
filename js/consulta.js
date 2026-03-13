@@ -103,15 +103,15 @@ function renderResultados(docs, nombre, cedula) {
       <div class="doc-card ${est}">
         <div class="doc-card-top">
           <div>
-            <div class="doc-name">${doc.Requisito || "Sin nombre"}</div>
-            <span class="doc-area">${doc.Área || "—"}</span>
+            <div class="doc-name">${SSTApi.escapeHTML(doc.Requisito || "Sin nombre")}</div>
+            <span class="doc-area">${SSTApi.escapeHTML(doc.Área || "—")}</span>
           </div>
-          <span class="badge ${est}">${doc.Estado || "Pendiente"}</span>
+          <span class="badge ${est}">${SSTApi.escapeHTML(doc.Estado || "Pendiente")}</span>
         </div>
         <div class="doc-meta">
           <div class="doc-meta-item">
             <span class="lbl">Archivo:</span>
-            <span class="val">${doc["Nombre Archivo"] || "—"}</span>
+            <span class="val">${SSTApi.escapeHTML(doc["Nombre Archivo"] || "—")}</span>
           </div>
           <div class="doc-meta-item">
             <span class="lbl">Cargado:</span>
@@ -121,7 +121,7 @@ function renderResultados(docs, nombre, cedula) {
         ${doc.Comentarios ? `
           <div class="doc-comment">
             <strong>💬 Comentarios del equipo SST:</strong>
-            ${doc.Comentarios}
+            ${SSTApi.escapeHTML(doc.Comentarios)}
           </div>
         ` : ""}
         <div class="doc-card-footer">
