@@ -35,10 +35,31 @@ async function buscar(e) {
       return;
     }
 
-    renderResultados(encontrados, nombre, cedula);
+    // Filtrar para mostrar solo el MÁS RECIENTE de cada Requisito + Área
+    const unicos = {};
+    encontrados.forEach(doc => {
+      // Creamos una clave única combinando Área y Requisito
+      const clave = (doc.Área || "") + "|" + (doc.Requisito || "");
+      
+      // Si no existe, o si el actual es más reciente que el guardado, lo reemplazamos
+      if (!unicos[clave]) {
+        unicos[clave] = doc;
+      } else {
+        const fechaActual = new Date(doc["Fecha Carga"] || 0);
+        const fechaGuardada = new Date(unicos[clave]["Fecha Carga"] || 0);
+        
+        if (fechaActual > fechaGuardada) {
+          unicos[clave] = doc;
+        }
+      }
+    });
+
+    const documentosFinales = Object.values(unicos);
+
+    renderResultados(documentosFinales, nombre, cedula);
     results.classList.add("show");
     results.scrollIntoView({ behavior: "smooth" });
-    msgEl.textContent = `✓ Se encontraron ${encontrados.length} documento(s)`;
+    msgEl.textContent = `✓ Se encontraron ${documentosFinales.length} documento(s)`;
     msgEl.className   = "msg exito show"; msgEl.style.display = "block";
 
   } catch(err) {
