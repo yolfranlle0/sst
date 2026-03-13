@@ -54,15 +54,47 @@ img, svg { display: block; max-width: 100%; }
 button, input, select, textarea { font-family: inherit; }
 a { color: inherit; text-decoration: none; }
 
-/* ── SPINNER ───────────────────────────────── */
+/* ── SPINNER PREMIUM ─────────────────────────── */
 .spinner {
-  width: 40px; height: 40px;
-  border: 3px solid var(--gray-200);
-  border-top-color: var(--navy-light);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  width: 48px;
+  height: 48px;
+  position: relative;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+
+.spinner::before,
+.spinner::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  inset: 0;
+}
+
+.spinner::before {
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--navy);
+  border-bottom-color: var(--navy-light);
+  animation: spinPremium 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+
+.spinner::after {
+  border: 4px solid transparent;
+  border-left-color: var(--accent);
+  border-right-color: var(--accent);
+  animation: spinPremiumReverse 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  opacity: 0.8;
+  transform: scale(0.85);
+}
+
+@keyframes spinPremium {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes spinPremiumReverse {
+  0%   { transform: rotate(360deg) scale(0.7); }
+  50%  { transform: rotate(180deg) scale(0.9); }
+  100% { transform: rotate(0deg) scale(0.7); }
+}
 
 /* ── ESTADO BADGES ─────────────────────────── */
 .badge {
