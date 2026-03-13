@@ -38,23 +38,32 @@ async function buscar(e) {
     // Filtrar para mostrar solo el MÁS RECIENTE de cada Requisito + Área
     const unicos = {};
     encontrados.forEach(doc => {
-      // Creamos una clave única combinando Área y Requisito
       const clave = (doc.Área || "") + "|" + (doc.Requisito || "");
       
-      // Si no existe, o si el actual es más reciente que el guardado, lo reemplazamos
+      // Si no existe, lo agregamos. 
+      // Si ya existe, lo reemplazamos con este nuevo, porque Google Sheets 
+      // devuelve los registros de arriba hacia abajo (los más nuevos están al final de la lista).
+      // Alternativamente, si tienen ID de Fila, el de número de fila mayor es el más nuevo.
+      
       if (!unicos[clave]) {
         unicos[clave] = doc;
       } else {
-        const fechaActual = new Date(doc["Fecha Carga"] || 0);
-        const fechaGuardada = new Date(unicos[clave]["Fecha Carga"] || 0);
+        // Obtenemos el número de fila (si existe) para estar 100% seguros
+        const filaActual = parseInt(doc.Fila) || 0;
+        const filaGuardada = parseInt(unicos[clave].Fila) || 0;
         
-        if (fechaActual > fechaGuardada) {
-          unicos[clave] = doc;
+        // Si el documento que estamos leyendo ahora está más abajo en el Excel (Fila mayor)
+        // o si simplemente vino después en el array (comportamiento normal), lo sobreescribimos.
+        if (filaActual >= filaGuardada) {
+            unicos[clave] = doc;
         }
       }
     });
 
     const documentosFinales = Object.values(unicos);
+
+    // Opcional: Para mantener el orden original visualmente si se desea
+    documentosFinales.sort((a,b) => (parseInt(a.Fila)||0) - (parseInt(b.Fila)||0));
 
     renderResultados(documentosFinales, nombre, cedula);
     results.classList.add("show");
