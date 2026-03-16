@@ -169,7 +169,9 @@ async function enviarFormulario() {
       const base64 = await SSTApi.fileToBase64(archivos[i]);
 
       await SSTApi.guardarDocumento({
-        proveedor, responsable, documento, empresa, area,
+        proveedor, responsable, 
+        documento: SSTApi.encrypt(documento), // ENCRIPTAR DOCUMENTO
+        empresa, area,
         requisito: reqs[i],
         nombreArchivo: archivos[i].name,
         base64

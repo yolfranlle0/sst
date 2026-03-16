@@ -25,7 +25,17 @@ async function buscar(e) {
     const encontrados = todos.filter(r => {
       if (!r || !r.Proveedor || !r.Documento) return false;
       const okNombre = r.Proveedor.toLowerCase().includes(nombre.toLowerCase());
-      const okDoc    = String(r.Documento).trim() === cedula.trim();
+      
+      // Intentar comparar con documento exacto (encriptado)
+      const docCifrado = SSTApi.encrypt(cedula.trim());
+      // Nota: Si el cifrado AES es dinámico (IV), esto fallará.
+      // Pero CryptoJS.AES.encrypt(text, key) produce una salida determinística 
+      // si no se especifica IV manualmente en ciertas versiones o modos.
+      // Sin embargo, para mayor robustez, lo ideal es desencriptar lo que viene de la base de datos:
+      
+      const docReal = SSTApi.decrypt(r.Documento);
+      const okDoc    = String(docReal).trim() === cedula.trim();
+      
       return okNombre && okDoc;
     });
 
@@ -89,7 +99,7 @@ function renderResultados(docs, nombre, cedula) {
   document.getElementById("rNombre").textContent = primer.Proveedor || "—";
   document.getElementById("rResp").textContent   = primer.Nombre    || "—";
   document.getElementById("rEmpresa").textContent= primer.Empresa   || "—";
-  document.getElementById("rDoc").textContent    = primer.Documento || "—";
+  document.getElementById("rDoc").textContent    = SSTApi.decrypt(primer.Documento) || "—";
   const areas = [...new Set(docs.map(d => d.Área).filter(Boolean))];
   document.getElementById("rAreas").textContent  = areas.join(", ") || "—";
   document.getElementById("rFecha").textContent  = new Date().toLocaleDateString("es-CO", { year:"numeric", month:"long", day:"numeric" });
@@ -128,7 +138,7 @@ function renderResultados(docs, nombre, cedula) {
           <a href="${doc["URL Documento"]}" target="_blank" class="doc-link">🔗 Ver documento</a>
           ${esRechazado ? `
             <button type="button" class="btn-reenviar" 
-              onclick="abrirModalReenvio('${doc.Requisito.replace(/'/g, "\\'")}', '${doc.Área.replace(/'/g, "\\'")}', '${nombre.replace(/'/g, "\\'")}', '${cedula}')">
+              onclick="abrirModalReenvio('${doc.Requisito.replace(/'/g, "\\'")}', '${doc.Área.replace(/'/g, "\\'")}', '${nombre.replace(/'/g, "\\'")}', '${SSTApi.decrypt(cedula)}')">
               📤 Reenviar Documento
             </button>
           ` : ""}

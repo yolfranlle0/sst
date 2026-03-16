@@ -10,6 +10,29 @@
 
 const SSTApi = {
 
+  // ── ENCRIPTACIÓN (CryptoJS AES) ─────────────
+  encrypt(texto) {
+    if (!texto) return "";
+    try {
+      return CryptoJS.AES.encrypt(String(texto), SST_CONFIG.ENCRYPTION_KEY).toString();
+    } catch (e) {
+      console.error("Encryption error:", e);
+      return texto;
+    }
+  },
+
+  decrypt(cifrado) {
+    if (!cifrado) return "";
+    try {
+      const bytes = CryptoJS.AES.decrypt(String(cifrado), SST_CONFIG.ENCRYPTION_KEY);
+      const original = bytes.toString(CryptoJS.enc.Utf8);
+      return original || cifrado; // fallback si falla la llave
+    } catch (e) {
+      console.error("Decryption error:", e);
+      return cifrado;
+    }
+  },
+
   // ── LEER REGISTROS — JSONP ──────────────────
   // La única técnica que funciona desde GitHub Pages / cualquier dominio.
   // Inyecta un <script src="GAS_URL?callback=fn"> — el navegador
@@ -256,6 +279,17 @@ const SSTApi = {
       usuario: usuario
     });
   },
+
+  // ── ELIMINAR DOCUMENTO ──────────────────────
+  async eliminarDocumento(datos) {
+    return await this.postData({
+      action:    "eliminarDocumento",
+      Fila:      datos.fila      || "",
+      Proveedor: datos.proveedor || "",
+      Requisito: datos.requisito || ""
+    });
+  },
+
 
   // ── SANITIZACIÓN HTML (PREVENIR XSS) ────────
   escapeHTML(str) {

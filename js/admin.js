@@ -264,6 +264,7 @@ function renderTablaDocumentos() {
                       <td style="padding: 8px 12px; text-align:right; display:flex; gap:0.5rem; justify-content:flex-end;">
                         ${archivoBtn}
                         <button class="btn btn-accent btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="abrirModalEstado(${globalIdx})">✏️ Estado</button>
+                        <button class="btn btn-danger btn-sm" style="padding: 4px 8px; font-size: 0.8rem;" onclick="eliminarDocumento(${globalIdx})">🗑️ Eliminar</button>
                       </td>
                     </tr>
                   `;
@@ -292,6 +293,28 @@ window.toggleProveedor = function(rowId) {
     if(icon) icon.style.transform = "rotate(0deg)";
   }
 };
+
+// Función para eliminar un documento con confirmación
+window.eliminarDocumento = async function(idx) {
+  const doc = registros[idx];
+  if (!doc) return;
+  const nombre = doc.Requisito || "este documento";
+  const proveedor = doc.Proveedor || "";
+  if (!confirm(`¿Eliminar el documento "${nombre}" del proveedor ${proveedor}?\n\nEsta acción no se puede deshacer.`)) return;
+  try {
+    Loading.show();
+    // Usamos doc.Fila o doc._fila como identificador
+    const filaId = doc.Fila || doc._fila || "";
+    await SSTApi.eliminarDocumento({ fila: filaId, proveedor: doc.Proveedor, requisito: doc.Requisito });
+    Toast.ok(`Documento eliminado correctamente`);
+    await cargarDatos();
+  } catch(e) {
+    Toast.err("Error al eliminar: " + e.message);
+  } finally {
+    Loading.hide();
+  }
+};
+
 
 /* ── FILA PARA DASHBOARD (MANTIENE FORMA PLANA) ───────────────────────── */
 function filaTR(r, idx, conArchivo) {
@@ -344,7 +367,7 @@ function abrirModalEstado(idx) {
   document.getElementById("meProv").textContent  = r.Proveedor || "—";
   document.getElementById("meReq").textContent   = r.Requisito || "—";
   document.getElementById("meArea").textContent  = r.Área      || "—";
-  document.getElementById("meDoc").textContent   = r.Documento || "—";
+  document.getElementById("meDoc").textContent   = SSTApi.decrypt(r.Documento) || "—";
   document.getElementById("meEstado").value      = r.Estado    || "Pendiente";
   document.getElementById("meComentarios").value = r.Comentarios || "";
 
@@ -368,7 +391,7 @@ async function guardarEstado() {
   try {
     const payloadEnvio = {
       proveedor:   r.Proveedor,
-      documento:   r.Documento,
+      documento:   r.Documento, // Mantenemos el campo encriptado tal cual está en el objeto 'r'
       requisito:   r.Requisito,
       area:        r.Área,
       estado:      nuevoEstado,
@@ -534,7 +557,7 @@ function renderProveedores() {
       <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
       <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
       <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
-      <div class="prov-detail">🪪 ${SSTApi.escapeHTML(p.documento   || "—")}</div>
+      <div class="prov-detail">🪪 ${SSTApi.escapeHTML(SSTApi.decrypt(p.documento) || "—")}</div>
       <div class="prov-stats">
         <span class="prov-tag">📄 ${p.total} docs</span>
         ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
