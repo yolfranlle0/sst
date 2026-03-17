@@ -6,7 +6,7 @@
 const SST_CONFIG = {
 
   // ── URL del Google Apps Script ─────────────
-  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwHm6N79_yaqP_SPI0soNT8O3OF3k7cnGEnH3ibypw4vJXTqt8wn2c7zGbKXQ9UQUAf/exec",
+  SCRIPT_URL: "https://script.google.com/macros/s/AKfycbznVUV34Uq1PZpnptl3Ks04wO1XapV6Bt__5cUP_8Qk9tyG5kr0n5yI-z25gc6fVjR4/exec",
 
   // ── Llave de encriptación (AES) ─────────────
   ENCRYPTION_KEY: "SST_OVO_2026_SECURE_KEY",
