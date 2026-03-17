@@ -588,9 +588,14 @@ function renderProveedores() {
   if (!grid) return;
 
   try {
+    if (!Array.isArray(registros)) {
+      grid.innerHTML = `<p style="padding:2rem;text-align:center">Error: Datos no cargados correctamente.</p>`;
+      return;
+    }
+
     const mapa = {};
     registros.forEach(r => {
-      if (!r.Proveedor) return;
+      if (!r || !r.Proveedor) return;
       if (!mapa[r.Proveedor]) {
         mapa[r.Proveedor] = { 
           nombre: r.Proveedor, 
@@ -601,7 +606,7 @@ function renderProveedores() {
           total: 0 
         };
       }
-      mapa[r.Proveedor].areas.add(r.Área);
+      if (r.Área) mapa[r.Proveedor].areas.add(r.Área);
       mapa[r.Proveedor].total++;
     });
 
@@ -612,38 +617,47 @@ function renderProveedores() {
     }
 
     grid.innerHTML = lista.map((p, i) => {
-      let docReal = "";
       try {
-        docReal = SSTApi.decrypt(p.documento) || "";
-      } catch(e) {
-        console.warn("Error desencriptando para proveedor:", p.nombre, e);
-        docReal = "Error";
+        let docReal = "";
+        try {
+          docReal = p.documento ? SSTApi.decrypt(p.documento) : "";
+        } catch(e) {
+          console.warn("Error desencriptando para proveedor:", p.nombre, e);
+          docReal = "Error";
+        }
+
+        const idSpan = `provDoc_${i}`;
+        const valEscaped = String(docReal || "").replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const areasArr = Array.from(p.areas || []).filter(Boolean);
+
+        return `
+          <div class="prov-card">
+            <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
+            <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
+            <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
+            <div class="prov-detail" style="display:flex; align-items:center; gap:5px;">
+              🪪 <span id="${idSpan}">${SSTApi.maskDocumento(docReal)}</span>
+              <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${valEscaped}', '${idSpan}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
+            </div>
+            <div class="prov-stats">
+              <span class="prov-tag">📄 ${p.total} docs</span>
+              ${areasArr.map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
+            </div>
+          </div>
+        `;
+      } catch (itemErr) {
+        console.error("Error procesando item de proveedor:", p, itemErr);
+        return `<div class="prov-card error">Error en dato</div>`;
       }
-
-      const idSpan = `provDoc_${i}`;
-      // Escapamos comillas simples para el atributo onclick
-      const valEscaped = docReal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-
-      return `
-        <div class="prov-card">
-          <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
-          <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
-          <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
-          <div class="prov-detail" style="display:flex; align-items:center; gap:5px;">
-            🪪 <span id="${idSpan}">${SSTApi.maskDocumento(docReal)}</span>
-            <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${valEscaped}', '${idSpan}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
-          </div>
-          <div class="prov-stats">
-            <span class="prov-tag">📄 ${p.total} docs</span>
-            ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
-          </div>
-        </div>
-      `;
     }).join("");
 
   } catch (err) {
-    console.error("[SST] Error en renderProveedores:", err);
-    grid.innerHTML = `<p style="color:var(--red-500);padding:2rem;grid-column:1/-1;text-align:center">❌ Error al generar la vista de proveedores. Revisa la consola.</p>`;
+    console.error("[SST] Error fatal en renderProveedores:", err);
+    grid.innerHTML = `<div style="color:var(--red-500);padding:2rem;text-align:center">
+      <h3>❌ Error crítico al cargar proveedores</h3>
+      <p>${err.message}</p>
+      <small>Por favor abre la consola (F12) para ver los detalles.</small>
+    </div>`;
   }
 }
 
