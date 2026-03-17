@@ -45,6 +45,11 @@ const SSTApi = {
 
       // GAS llamará esta función con los datos
       window[cbName] = (data) => {
+        if (done) {
+          // Si ya terminó (por timeout), simplemente nos limpiamos
+          delete window[cbName];
+          return;
+        }
         done = true;
         cleanup();
         if (data && (data.success || data.registros)) {
@@ -56,7 +61,7 @@ const SSTApi = {
 
       const cleanup = () => {
         try { document.head.removeChild(script); } catch(e) {}
-        delete window[cbName];
+        // No borramos window[cbName] aquí para evitar ReferenceError si el script llega tarde
       };
 
       script.src = SST_CONFIG.SCRIPT_URL
@@ -67,19 +72,23 @@ const SSTApi = {
         if (done) return;
         done = true;
         cleanup();
+        delete window[cbName]; // Aquí sí podemos borrarlo
         reject(new Error(
           "No se pudo cargar el script de GAS.\n" +
           "Verifica que el despliegue tenga acceso: 'Cualquier persona'."
         ));
       };
 
-      // Timeout 18 segundos
+      // Timeout 30 segundos (a veces GAS es lento si hay muchos datos)
       setTimeout(() => {
         if (done) return;
         done = true;
         cleanup();
-        reject(new Error("Tiempo de espera agotado (18s). El servidor no respondió."));
-      }, 18000);
+        // Dejamos una función vacía que se auto-elimine para evitar ReferenceError
+        const originalCb = window[cbName];
+        window[cbName] = () => { delete window[cbName]; };
+        reject(new Error("Tiempo de espera agotado (30s). El servidor no respondió."));
+      }, 30000);
 
       document.head.appendChild(script);
     });
