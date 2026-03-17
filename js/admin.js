@@ -584,41 +584,67 @@ async function eliminarReq(idx) {
 
 /* ── PROVEEDORES ────────────────────────────── */
 function renderProveedores() {
-  const mapa = {};
-  registros.forEach(r => {
-    if (!r.Proveedor) return;
-    if (!mapa[r.Proveedor]) {
-      mapa[r.Proveedor] = { nombre: r.Proveedor, responsable: r.Nombre, empresa: r.Empresa, documento: r.Documento, areas: new Set(), total: 0 };
-    }
-    mapa[r.Proveedor].areas.add(r.Área);
-    mapa[r.Proveedor].total++;
-  });
-
   const grid = document.getElementById("provGrid");
+  if (!grid) return;
 
-  if (!Object.keys(mapa).length) {
-    grid.innerHTML = `<p style="color:var(--gray-400);padding:2rem;grid-column:1/-1;text-align:center">No hay proveedores registrados</p>`;
-    return;
+  try {
+    const mapa = {};
+    registros.forEach(r => {
+      if (!r.Proveedor) return;
+      if (!mapa[r.Proveedor]) {
+        mapa[r.Proveedor] = { 
+          nombre: r.Proveedor, 
+          responsable: r.Nombre, 
+          empresa: r.Empresa, 
+          documento: r.Documento, 
+          areas: new Set(), 
+          total: 0 
+        };
+      }
+      mapa[r.Proveedor].areas.add(r.Área);
+      mapa[r.Proveedor].total++;
+    });
+
+    const lista = Object.values(mapa);
+    if (!lista.length) {
+      grid.innerHTML = `<p style="color:var(--gray-400);padding:2rem;grid-column:1/-1;text-align:center">No hay proveedores registrados</p>`;
+      return;
+    }
+
+    grid.innerHTML = lista.map((p, i) => {
+      let docReal = "";
+      try {
+        docReal = SSTApi.decrypt(p.documento) || "";
+      } catch(e) {
+        console.warn("Error desencriptando para proveedor:", p.nombre, e);
+        docReal = "Error";
+      }
+
+      const idSpan = `provDoc_${i}`;
+      // Escapamos comillas simples para el atributo onclick
+      const valEscaped = docReal.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      return `
+        <div class="prov-card">
+          <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
+          <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
+          <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
+          <div class="prov-detail" style="display:flex; align-items:center; gap:5px;">
+            🪪 <span id="${idSpan}">${SSTApi.maskDocumento(docReal)}</span>
+            <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${valEscaped}', '${idSpan}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
+          </div>
+          <div class="prov-stats">
+            <span class="prov-tag">📄 ${p.total} docs</span>
+            ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (err) {
+    console.error("[SST] Error en renderProveedores:", err);
+    grid.innerHTML = `<p style="color:var(--red-500);padding:2rem;grid-column:1/-1;text-align:center">❌ Error al generar la vista de proveedores. Revisa la consola.</p>`;
   }
-
-  grid.innerHTML = Object.values(mapa).map((p, i) => {
-    const docReal = SSTApi.decrypt(p.documento);
-    const idSpan = `provDoc_${i}`;
-    return `
-    <div class="prov-card">
-      <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
-      <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
-      <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
-      <div class="prov-detail" style="display:flex; align-items:center; gap:5px;">
-        🪪 <span id="${idSpan}">${SSTApi.maskDocumento(docReal)}</span>
-        <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${docReal.replace(/'/g,"\\'")}', '${idSpan}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
-      </div>
-      <div class="prov-stats">
-        <span class="prov-tag">📄 ${p.total} docs</span>
-        ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
-      </div>
-    </div>
-  `;}).join("");
 }
 
 window.toggleRevealDocProv = function(realVal, id) {
