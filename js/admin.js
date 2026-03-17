@@ -601,16 +601,17 @@ function renderProveedores() {
     return;
   }
 
-  grid.innerHTML = Object.values(mapa).map(p => {
+  grid.innerHTML = Object.values(mapa).map((p, i) => {
     const docReal = SSTApi.decrypt(p.documento);
+    const idSpan = `provDoc_${i}`;
     return `
     <div class="prov-card">
       <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
       <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
       <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
       <div class="prov-detail" style="display:flex; align-items:center; gap:5px;">
-        🪪 <span id="provDoc_${p.nombre.replace(/\s+/g,'_')}">${SSTApi.maskDocumento(docReal)}</span>
-        <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${docReal.replace(/'/g,"\\'")}', 'provDoc_${p.nombre.replace(/\s+/g,'_')}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
+        🪪 <span id="${idSpan}">${SSTApi.maskDocumento(docReal)}</span>
+        <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${docReal.replace(/'/g,"\\'")}', '${idSpan}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
       </div>
       <div class="prov-stats">
         <span class="prov-tag">📄 ${p.total} docs</span>
