@@ -293,7 +293,8 @@ const SSTApi = {
       action:    "eliminarDocumento",
       Fila:      datos.fila      || "",
       Proveedor: datos.proveedor || "",
-      Requisito: datos.requisito || ""
+      Requisito: datos.requisito || "",
+      Área:      datos.area      || ""
     });
   },
 
