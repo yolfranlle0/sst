@@ -308,6 +308,14 @@ const SSTApi = {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  },
+
+  // ── ENMASCARAMIENTO ─────────────────────────
+  maskDocumento(texto) {
+    if (!texto) return "—";
+    const s = String(texto).trim();
+    if (s.length <= 4) return s; // muy corto para mascarear
+    return s.substring(0, 3) + "****" + s.substring(s.length - 2);
   }
 };
 

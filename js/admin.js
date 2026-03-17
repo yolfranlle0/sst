@@ -394,15 +394,34 @@ function abrirModalEstado(idx) {
   if (!r) return;
   editandoDoc = { idx, r };
 
+  const docReal = SSTApi.decrypt(r.Documento);
+
   document.getElementById("meProv").textContent  = r.Proveedor || "—";
   document.getElementById("meReq").textContent   = r.Requisito || "—";
   document.getElementById("meArea").textContent  = r.Área      || "—";
-  document.getElementById("meDoc").textContent   = SSTApi.decrypt(r.Documento) || "—";
+  
+  // Mostrar documento enmascarado con botón de revelar
+  const docEl = document.getElementById("meDoc");
+  docEl.innerHTML = `
+    <span id="meDocVal">${SSTApi.maskDocumento(docReal)}</span>
+    <button class="btn btn-ghost btn-sm" onclick="toggleRevealDoc('${docReal.replace(/'/g,"\\'")}')" style="padding:2px 5px; margin-left:5px;" title="Mostrar/Ocultar">👁️</button>
+  `;
+
   document.getElementById("meEstado").value      = r.Estado    || "Pendiente";
   document.getElementById("meComentarios").value = r.Comentarios || "";
 
   document.getElementById("modalEstado").classList.add("show");
 }
+
+window.toggleRevealDoc = function(realVal) {
+  const el = document.getElementById("meDocVal");
+  if (!el) return;
+  if (el.textContent.includes("*")) {
+    el.textContent = realVal;
+  } else {
+    el.textContent = SSTApi.maskDocumento(realVal);
+  }
+};
 
 function cerrarModalEstado() {
   document.getElementById("modalEstado").classList.remove("show");
@@ -582,16 +601,31 @@ function renderProveedores() {
     return;
   }
 
-  grid.innerHTML = Object.values(mapa).map(p => `
+  grid.innerHTML = Object.values(mapa).map(p => {
+    const docReal = SSTApi.decrypt(p.documento);
+    return `
     <div class="prov-card">
       <div class="prov-name">🏢 ${SSTApi.escapeHTML(p.nombre)}</div>
       <div class="prov-detail">👤 ${SSTApi.escapeHTML(p.responsable || "—")}</div>
       <div class="prov-detail">🏭 ${SSTApi.escapeHTML(p.empresa     || "—")}</div>
-      <div class="prov-detail">🪪 ${SSTApi.escapeHTML(SSTApi.decrypt(p.documento) || "—")}</div>
+      <div class="prov-detail" style="display:flex; align-items:center; gap:5px;">
+        🪪 <span id="provDoc_${p.nombre.replace(/\s+/g,'_')}">${SSTApi.maskDocumento(docReal)}</span>
+        <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocProv('${docReal.replace(/'/g,"\\'")}', 'provDoc_${p.nombre.replace(/\s+/g,'_')}')" style="padding:2px 4px; font-size:0.7rem;">👁️</button>
+      </div>
       <div class="prov-stats">
         <span class="prov-tag">📄 ${p.total} docs</span>
         ${[...p.areas].filter(Boolean).map(a => `<span class="prov-tag">${SSTApi.escapeHTML(a)}</span>`).join("")}
       </div>
     </div>
-  `).join("");
+  `;}).join("");
 }
+
+window.toggleRevealDocProv = function(realVal, id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.textContent.includes("*")) {
+    el.textContent = realVal;
+  } else {
+    el.textContent = SSTApi.maskDocumento(realVal);
+  }
+};

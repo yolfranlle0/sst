@@ -99,7 +99,11 @@ function renderResultados(docs, nombre, cedula) {
   document.getElementById("rNombre").textContent = primer.Proveedor || "—";
   document.getElementById("rResp").textContent   = primer.Nombre    || "—";
   document.getElementById("rEmpresa").textContent= primer.Empresa   || "—";
-  document.getElementById("rDoc").textContent    = SSTApi.decrypt(primer.Documento) || "—";
+  const docReal = SSTApi.decrypt(primer.Documento);
+  document.getElementById("rDoc").innerHTML = `
+    <span id="rDocVal">${SSTApi.maskDocumento(docReal)}</span>
+    <button class="btn btn-ghost btn-sm" onclick="toggleRevealDocConsulta('${docReal.replace(/'/g,"\\'")}')" style="padding:2px 5px; margin-left:5px; border:none; background:transparent; cursor:pointer;" title="Mostrar/Ocultar">👁️</button>
+  `;
   const areas = [...new Set(docs.map(d => d.Área).filter(Boolean))];
   document.getElementById("rAreas").textContent  = areas.join(", ") || "—";
   document.getElementById("rFecha").textContent  = new Date().toLocaleDateString("es-CO", { year:"numeric", month:"long", day:"numeric" });
@@ -157,3 +161,13 @@ function renderResultados(docs, nombre, cedula) {
   document.getElementById("rsApro").textContent  = aprobados;
   document.getElementById("rsRech").textContent  = rechazados;
 }
+
+window.toggleRevealDocConsulta = function(realVal) {
+  const el = document.getElementById("rDocVal");
+  if (!el) return;
+  if (el.textContent.includes("*")) {
+    el.textContent = realVal;
+  } else {
+    el.textContent = SSTApi.maskDocumento(realVal);
+  }
+};
