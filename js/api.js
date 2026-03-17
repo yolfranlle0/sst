@@ -91,6 +91,7 @@ const SSTApi = {
   postData(datos) {
     return new Promise((resolve) => {
       const frameName = "sst_" + Date.now();
+      console.log("[SST API] Enviando POST:", datos);
 
       const iframe = document.createElement("iframe");
       iframe.name  = frameName;
@@ -125,10 +126,15 @@ const SSTApi = {
           const m   = txt.match(/\{[\s\S]*\}/);
           if (m) respuesta = JSON.parse(m[0]);
         } catch(e) {
-          // cross-origin: no podemos leer → el dato sí llegó
+          // cross-origin: no podemos leer → el dato sí llegó (probablemente)
         }
         cleanup();
-        resolve(respuesta || { success: true, éxito: true });
+        if (respuesta) {
+          resolve(respuesta);
+        } else {
+          // Si no podemos leer la respuesta, devolvemos éxito con un flag de advertencia
+          resolve({ success: true, éxito: true, _isFallbackSuccess: true });
+        }
       };
 
       // Timeout 16s
@@ -136,7 +142,8 @@ const SSTApi = {
         if (done) return;
         done = true;
         cleanup();
-        resolve({ success: true, éxito: true, _timeout: true });
+        console.warn("[SST API] Timeout en postData, asumiendo éxito (fallback)");
+        resolve({ success: true, éxito: true, _timeout: true, _isFallbackSuccess: true });
       }, 16000);
 
       form.submit();

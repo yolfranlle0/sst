@@ -300,14 +300,44 @@ window.eliminarDocumento = async function(idx) {
   if (!doc) return;
   const nombre = doc.Requisito || "este documento";
   const proveedor = doc.Proveedor || "";
+  const area = doc.Área || "";
+
   if (!confirm(`¿Eliminar el documento "${nombre}" del proveedor ${proveedor}?\n\nEsta acción no se puede deshacer.`)) return;
+  
   try {
     Loading.show();
     // Usamos doc.Fila o doc._fila como identificador
     const filaId = doc.Fila || doc._fila || "";
-    await SSTApi.eliminarDocumento({ fila: filaId, proveedor: doc.Proveedor, requisito: doc.Requisito });
-    Toast.ok(`Documento eliminado correctamente`);
+    
+    // NOTA: Enviamos 'Área' también por si el backend lo requiere para filtrar/validar
+    const res = await SSTApi.eliminarDocumento({ 
+      fila: filaId, 
+      proveedor: doc.Proveedor, 
+      requisito: doc.Requisito,
+      area: area 
+    });
+
+    console.log("[SST] Respuesta eliminación:", res);
+
+    // Recargar datos para verificar
     await cargarDatos();
+
+    // Verificación de diagnóstico: ¿Sigue existiendo el documento?
+    const sigoExistiendo = registros.some(r => 
+      (r.Fila || r._fila) == filaId || 
+      (r.Proveedor === doc.Proveedor && r.Requisito === doc.Requisito && r.Área === area)
+    );
+
+    if (sigoExistiendo) {
+      if (res._isFallbackSuccess) {
+        Toast.err("El servidor no confirmó la eliminación y el dato sigue apareciendo. Es posible que el script de Google no tenga permisos de escritura.");
+      } else {
+        Toast.err("Error: Se solicitó eliminar pero el documento persiste en la base de datos.");
+      }
+    } else {
+      Toast.ok(`Documento eliminado correctamente`);
+    }
+
   } catch(e) {
     Toast.err("Error al eliminar: " + e.message);
   } finally {

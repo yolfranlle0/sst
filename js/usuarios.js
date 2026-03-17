@@ -122,14 +122,26 @@ async function eliminarUsuario(usuario) {
   Loading.show();
   try {
     const res = await SSTApi.eliminarUsuarioBackend(usuario);
-    if (res.success) {
-      Toast.ok("Usuario eliminado");
-      renderUsuarios();
+    console.log("[SST] Respuesta eliminar usuario:", res);
+    
+    // Recargar lista
+    await renderUsuarios();
+    
+    // Verificación de diagnóstico
+    const sigoExistiendo = listaUsuarios.some(u => u.usuario === usuario);
+    
+    if (sigoExistiendo) {
+      if (res._isFallbackSuccess) {
+        Toast.err("No se pudo confirmar la eliminación y el usuario persiste. Revisa los permisos del script.");
+      } else {
+        Toast.err("Error: El usuario no pudo ser eliminado del servidor.");
+      }
     } else {
-      Toast.err("Error: " + res.error);
+      Toast.ok("Usuario eliminado correctamente");
     }
+
   } catch (err) {
-    Toast.err("Error de conexión al eliminar");
+    Toast.err("Error de conexión al eliminar: " + err.message);
   } finally {
     Loading.hide();
   }
